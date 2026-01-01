@@ -1,6 +1,6 @@
 import re
 import os
-from typing import List, Dict, Any
+from typing import List, Any
 from .interfaces import TranscriberInterface
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -80,8 +80,6 @@ class OpanAITranscriber(TranscriberInterface):
             output.append(f"{current_speaker}:\n" + " ".join(buffer))
 
         return "\n".join(output)
-
-
 
 
     def transcribe(self, 

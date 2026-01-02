@@ -82,3 +82,21 @@ class MediaChunkerInterface(ABC):
         pass
 
 
+class TranscriptionNormaliser(ABC):
+    """
+    Contract for any class that handles reuniting and eventual correction of the transcriptions.  
+    """
+
+    @abstractmethod
+    def post_process(self, input_dir: str) -> str:
+        """
+        Reunite txt transcriptions from one ausio or video file to a single texte and pass in through the llm 
+        to improve the quality of the transcription. 
+
+        Args:
+            input_dir (str):  The absolute path to the source files.
+        
+        Returns:
+            A final text of the transcription. 
+        """
+        pass

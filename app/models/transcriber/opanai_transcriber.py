@@ -1,11 +1,8 @@
 import re
 import os
 from typing import List, Any
-from .interfaces import TranscriberInterface
+from ..interfaces import TranscriberInterface
 from openai import OpenAI
-from dotenv import load_dotenv
-
-load_dotenv()
 
 
 class OpanAITranscriber(TranscriberInterface):

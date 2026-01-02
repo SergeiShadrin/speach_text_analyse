@@ -2,7 +2,7 @@ import os
 import subprocess
 import math
 import glob
-from .interfaces import MediaChunkerInterface
+from ..interfaces import MediaChunkerInterface
 from typing import List
 from pathlib import Path
 

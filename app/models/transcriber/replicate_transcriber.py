@@ -1,11 +1,10 @@
 import os
 from typing import Optional, Dict, Any
 import replicate
-from dotenv import load_dotenv
 
-from .interfaces import TranscriberInterface
+from ..interfaces import TranscriberInterface
 
-load_dotenv()
+
 
 class ReplicateTranscriber(TranscriberInterface):
     """
@@ -13,7 +12,6 @@ class ReplicateTranscriber(TranscriberInterface):
     to call WhisperX as a transcription model.
     """
     
-    # Store the model string as a constant for easier updates
     MODEL_VERSION = "victor-upmeet/whisperx:84d2ad2d6194fe98a17d2b60bef1c7f910c46b2f6fd38996ca457afd9c8abfcb"
 
     def __init__(self):
@@ -72,6 +70,7 @@ class ReplicateTranscriber(TranscriberInterface):
         Raises:
             FileNotFoundError: If the input_path does not exist.
         """
+        hf_token = os.getenv("HUGGINGFACE_API_TOKEN")
         if not os.path.exists(input_path):
             raise FileNotFoundError(f"Input file not found: {input_path}")
         
@@ -84,7 +83,8 @@ class ReplicateTranscriber(TranscriberInterface):
             "diarization": True,
             "temperature": 0,
             "align_output": False,
-            "language": "fr"
+            "language": "fr",
+            "huggingface_access_token": hf_token
         }
         
         # 2. Merge user kwargs into defaults

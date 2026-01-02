@@ -1,7 +1,7 @@
 import os
 import subprocess
 from pathlib import Path
-from .interfaces import MediaConverterInterface
+from ..interfaces import MediaConverterInterface
 
 
 class FFmpegMediaConverter(MediaConverterInterface):
@@ -11,8 +11,7 @@ class FFmpegMediaConverter(MediaConverterInterface):
     """
 
     def extract_audio(self,
-                      input_path: str, 
-                      output_path: str = None) -> str:
+                      input_path: str) -> str:
         """
         Converts any media file (mp4, mkv, mp3, flac, ogg, etc.) to a 
         16kHz, Mono, PCM WAV file suitable for AI Transcription.
@@ -26,10 +25,10 @@ class FFmpegMediaConverter(MediaConverterInterface):
             raise FileNotFoundError(f"Input file not found: {input_path}")
 
         # 1. Determine the output path
-        if output_path is None:
-            filename = os.path.basename(input_path)
-            _name = os.path.splitext(filename)[0]
-            output_path = f"data/input/audio/{_name}.wav"
+        
+        filename = os.path.basename(input_path)
+        _name = os.path.splitext(filename)[0]
+        output_path = f"data/input/audio/{_name}.wav"
 
         # 2. Build the FFmpeg Command
         command = [

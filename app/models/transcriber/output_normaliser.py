@@ -161,7 +161,7 @@ class Normaliser(TranscriptionNormaliser):
         return chunks
     
 
-    def post_process(self, input_dir: str) -> str: 
+    def post_process(self, row_transcription: str) -> str: 
         """
         Main workflow: Merges files, chunks them, and normalizes via LLM.
 
@@ -171,17 +171,14 @@ class Normaliser(TranscriptionNormaliser):
         Returns:
             str: The final, normalized transcription text.
         """
-        # 1. Validation
-        if not os.path.exists(input_dir):
-            raise FileNotFoundError(f"Input directory not found: {input_dir}")
-        
-        if not os.listdir(input_dir):
-            raise ValueError(f"Input directory is empty: {input_dir}")
+
+        if row_transcription is not None:
+            raise ValueError(f"Input is empt")
         
         # 2. Preparation
         logger.info(f"Merging files from: {input_dir}")
-        raw_transcript = self.load_and_merge_files(input_dir) 
-        chunks = self._create_smart_chunks(raw_transcript)
+        #raw_transcript = self.load_and_merge_files(input_dir) 
+        chunks = self._create_smart_chunks(row_transcription)
         
         normalized_parts = []
 

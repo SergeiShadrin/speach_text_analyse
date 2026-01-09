@@ -18,7 +18,7 @@ from app.models.interfaces import (
 )
 from app.models.transcriber.media_chunker import AudioChunker
 from app.models.transcriber.media_converter import FFmpegMediaConverter
-# TYPO FIX: OpanAI -> OpenAI
+
 from app.models.transcriber.opanai_transcriber import OpanAITranscriber 
 from app.models.transcriber.replicate_transcriber import ReplicateTranscriber
 from app.models.transcriber.output_normaliser import Normaliser
@@ -90,6 +90,7 @@ class TranscriptionService:
     # PROCESS SINGLE FILE
     # ---------------------------------------------------------
     def process_file(self, 
+                     description: str,
                      input_file_path: Path, 
                      diarization: bool = True,
                      language: str = "fr") -> None:
@@ -109,8 +110,9 @@ class TranscriptionService:
         # Create Parent Record
         media_record = self.repo.create_media_file(
             filename=input_file_path.name, 
+            description=description,
             path=str(input_file_path), 
-            media_type=media_type
+            media_type=media_type,
         )
         
         file_id = media_record.id
@@ -139,7 +141,7 @@ class TranscriptionService:
         # STEP 2: Split Audio
         # ---------------------------------------------------------
         logger.info("Step 2: Splitting audio...")
-        audio_chunk_paths = self.chunker.split(str(temp_wav_path), str(chunks_audio_dir), chunk_size_mb=20)
+        audio_chunk_paths = self.chunker.split(str(temp_wav_path), str(chunks_audio_dir), chunk_size_mb=100)
         audio_chunk_paths.sort() 
 
         # ---------------------------------------------------------
@@ -221,8 +223,10 @@ class TranscriptionService:
     # ---------------------------------------------------------
     # Import existing text files
     # ---------------------------------------------------------
-    def save_to_db_existing_transcriptions(self, directory: str):
+    def save_to_db_existing_transcriptions(self, directory: str, description: str,):
         dir_path = Path(directory)
+        # Create or get the project id
+
         if not dir_path.exists():
             return
 
@@ -231,16 +235,35 @@ class TranscriptionService:
                 with open(file_path, "r", encoding="utf-8") as f:
                     _text = f.read()
                 
-                self.repo.create_text_only_entry(
+                transcription_id = self.repo.create_text_only_entry(
                     filename=file_path.name, 
-                    full_text=_text
+                    full_text=_text,
+                    description=description
                 )
+
+                # Split the clean text into smart paragraphs
+                new_text_segments = self._text_splitter(_text)
+
+                # Prepare data for bulk insert
+                _chunks_data = []
+                for i, segment in enumerate(new_text_segments):
+                    _chunks_data.append({
+                        "index": i,
+                        "text": segment,
+                        "vector": None # Ready for embedding service
+                    })
+
+                # Save new chunks
+                self.repo.save_chunks(transcription_id, _chunks_data)
+
+
                 logger.info(f"Imported: {file_path.name}")
 
     # ---------------------------------------------------------
     # MAIN RUNNER
     # ---------------------------------------------------------
     def run(self, 
+            description: str,
             input_dir: Path = _INPUT_DIR, 
             archives_dir: Path = _ARCHIVES, 
             diarization: bool = True,
@@ -265,6 +288,7 @@ class TranscriptionService:
                 self.process_file(
                     input_file_path=file_path, 
                     diarization=diarization, 
+                    description=description,
                     language=language
                 )
 

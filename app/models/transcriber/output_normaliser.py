@@ -102,7 +102,7 @@ class Normaliser(TranscriptionNormaliser):
         files = [f for f in os.listdir(input_dir) if f.endswith(".txt")]
         
         # Natural Sort: Handles "test_1" vs "test_10" correctly
-        files.sort(key=lambda f: [int(text) if text.isdigit() else text.lower() for text in re.split('(\d+)', f)])
+        files.sort(key=lambda f: [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', f)])
 
         merged_parts = []
         for filename in files:
@@ -172,11 +172,11 @@ class Normaliser(TranscriptionNormaliser):
             str: The final, normalized transcription text.
         """
 
-        if row_transcription is not None:
-            raise ValueError(f"Input is empt")
+        if row_transcription is None:
+            raise ValueError(f"Input is empty")
         
         # 2. Preparation
-        logger.info(f"Merging files from: {input_dir}")
+        logger.info(f"Dividing the initial text into chunks.")
         #raw_transcript = self.load_and_merge_files(input_dir) 
         chunks = self._create_smart_chunks(row_transcription)
         

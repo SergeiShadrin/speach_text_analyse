@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.core.entities import MediaFile, Transcription, ProcessingStatus, MediaType, TranscriptionChunk
+from app.core.entities import Project, MediaFile, Transcription, ProcessingStatus, MediaType, TranscriptionChunk
 from typing import Optional, List, Dict, Any
 import os
 import uuid
@@ -15,23 +15,79 @@ class MediaRepository:
         """
         self.db = db
 
+    def _get_default_project_id(self) -> uuid.UUID:
+        """
+        Internal helper: Finds the 'Global Default' project.
+        If it doesn't exist, it creates it instantly.
+        """
+        DEFAULT_NAME = "Transcriptions" 
 
-    def create_text_only_entry(self, filename: str, full_text: str) -> MediaFile:
+        # 1. Try to find the default project
+        project = self.db.query(Project).filter(Project.name == DEFAULT_NAME).first()
+        
+        # 2. If it exists, return its ID
+        if project:
+            return project.id
+            
+        # 3. If not, create it once and return the new ID
+        try:
+            new_project = Project(name=DEFAULT_NAME)
+            self.db.add(new_project)
+            self.db.commit()
+            self.db.refresh(new_project)
+            return new_project.id
+        except Exception:
+            # If creation failed (because another process just created it), rollback and fetch again
+            self.db.rollback()
+            project = self.db.query(Project).filter(Project.name == DEFAULT_NAME).first()
+            return project.id
+        
+
+    def get_or_create_project(self, project_name: str) -> Project:
+        """
+        Retrieves a project by name, or creates it if it doesn't exist.
+        """
+        # 1. Try to find it
+        project = self.db.query(Project).filter(Project.name == project_name).first()
+        if project:
+            return project
+            
+        # 2. Create if missing (with safety)
+        try:
+            new_project = Project(name=project_name)
+            self.db.add(new_project)
+            self.db.commit()
+            self.db.refresh(new_project)
+            return new_project
+        except Exception:
+            self.db.rollback()
+            return self.db.query(Project).filter(Project.name == project_name).first()
+
+
+    def create_text_only_entry(self, 
+                               filename: str, 
+                               full_text: str, 
+                               description: str,
+                               project_id: uuid.UUID = None) -> MediaFile:
         """
         Creates a record for a transcription that has no source audio.
         Useful for importing existing notes or texts.
         """
+        if project_id is None:
+            project_id = self._get_default_project_id()
+
         # 1. Create the 'Shell' MediaFile (Metadata holder)
         new_file = MediaFile(
             filename=filename,
-            file_path=None,  # No file on disk!
-            media_type=MediaType.AUDIO, # Default
-            status=ProcessingStatus.COMPLETED # It's already done
+            file_path=None, 
+            description=description,
+            media_type=MediaType.AUDIO, 
+            status=ProcessingStatus.COMPLETED,
+            project_id=project_id
         )
         self.db.add(new_file)
         self.db.commit()
         self.db.refresh(new_file)
-
 
         # 2. Attach the Text
         transcription = Transcription(
@@ -41,17 +97,30 @@ class MediaRepository:
         )
         self.db.add(transcription)
         self.db.commit()
+
+        transcription_id = new_file.transcription.id
         
-        return new_file
+        return transcription_id
+    
 
 
-    def create_media_file(self, filename: str, path: str, media_type: MediaType) -> MediaFile:
+    def create_media_file(self, 
+                          filename: str, 
+                          path: str, 
+                          description: str,
+                          media_type: MediaType, 
+                          project_id: uuid.UUID = None) -> MediaFile:
         """Creates a new record for a file being uploaded."""
+        if project_id is None:
+            project_id = self._get_default_project_id()
+
         new_file = MediaFile(
             filename=filename,
             file_path=path,
-            media_type=media_type, # Logic to detect type can go here
-            status=ProcessingStatus.PENDING
+            media_type=media_type, 
+            description = description,
+            status=ProcessingStatus.PENDING,
+            project_id=project_id
         )
         self.db.add(new_file)
         self.db.commit()
@@ -77,7 +146,7 @@ class MediaRepository:
             media_file_id=media_file_id,
             full_text="",  # Empty for now
             model_used=model,
-            language="detecting..." 
+            language="..." 
         )
         self.db.add(new_transcription)
         self.db.commit()
@@ -192,42 +261,5 @@ class MediaRepository:
         
         self.db.commit()
         return record
-
-
-
-    # --- HELPER: Find Transcriptions (even if file is deleted) ---
-    def get_transcription_by_id(self, file_id: uuid.UUID) -> Optional[str]:
-        """
-        Finds text regardless of whether the video still exists.
-        """
-        # We query the MediaFile, knowing the transcription is linked
-        record = self.db.query(MediaFile).filter(MediaFile.id == file_id).first()
-        
-        if record and record.transcription:
-            return record.transcription.full_text
-        return None
     
 
-    def search_by_filename(self, query_string: str) -> List[Dict]:
-        """
-        Finds all files whose name contains the query_string.
-        Example: query="meet" -> finds "Meeting.mp4" and "team_meeting_final.wav"
-        """
-        # 1. Perform the search
-        # .ilike() is a PostgreSQL feature for "Case-Insensitive Like"
-        # The % symbols mean "match anything before or after"
-        results = self.db.query(MediaFile).filter(
-            MediaFile.filename.ilike(f"%{query_string}%")
-        ).all()
-
-        # 2. Return a clean list of results
-        found_files = []
-        for file in results:
-            found_files.append({
-                "id": str(file.id),          # Convert UUID to string for easy reading
-                "filename": file.filename,
-                "status": file.status.value,
-                "has_text": True if file.transcription else False
-            })
-            
-        return found_files

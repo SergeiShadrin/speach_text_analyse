@@ -32,6 +32,19 @@ class MediaType(PyEnum):
 
 
 # --- TABLES ---
+
+class Project(Base):
+    __tablename__ = "projects"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(100), unique=True) # Project names must be unique
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+    # Link to files
+    files: Mapped[List["MediaFile"]] = relationship("MediaFile", back_populates="project", cascade="all, delete-orphan")
+
+
+
 class MediaFile(Base):
     __tablename__ = "media_files"
 
@@ -40,6 +53,7 @@ class MediaFile(Base):
     file_path: Mapped[str] = mapped_column(String(1024), nullable=True) 
     media_type: Mapped[MediaType] = mapped_column(ENUM(MediaType, name="media_type_enum"))
     status: Mapped[ProcessingStatus] = mapped_column(ENUM(ProcessingStatus, name="status_enum"), default=ProcessingStatus.PENDING)
+    description: Mapped[str] = mapped_column(String(1000))
     
     # Metadata
     duration_seconds: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
@@ -47,9 +61,12 @@ class MediaFile(Base):
         DateTime(timezone=True), 
         default=lambda: datetime.now(timezone.utc) 
     )
+
+    project_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("projects.id"), nullable=True)
     
     # Relationships
     transcription: Mapped["Transcription"] = relationship("Transcription", back_populates="media_file", uselist=False)
+    project: Mapped["Project"] = relationship("Project", back_populates="files")
 
 
 
@@ -61,7 +78,7 @@ class Transcription(Base):
     
     # Content
     full_text: Mapped[str] = mapped_column(Text) # The merged, clean text
-    language: Mapped[str] = mapped_column(String(10), default="fr")
+    language: Mapped[str] = mapped_column(String(100), default="fr")
     
     # Metadata
     model_used: Mapped[str] = mapped_column(String(50))

@@ -3,6 +3,7 @@ import os
 from typing import List, Any
 from ..interfaces import TranscriberInterface
 from openai import OpenAI
+from app.core.config import settings
 
 
 class OpanAITranscriber(TranscriberInterface):
@@ -15,7 +16,7 @@ class OpanAITranscriber(TranscriberInterface):
         Initialize the OpenAI client and define filler words to be removed.
         Requires OPENAI_API_KEY to be set in environment variables.
         """
-        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
         self.FILLERS = [
                 r"\buh\b", r"\bum\b", r"\bah\b", r"\bso\b", r"\byou know\b"
                 ]

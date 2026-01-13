@@ -10,6 +10,8 @@ from google import genai
 from google.genai import types
 from ..interfaces import TranscriptionNormaliser
 
+from app.core.config import settings
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
@@ -29,7 +31,7 @@ class Normaliser(TranscriptionNormaliser):
             prompt_path (str): Absolute path to the system prompt text file.
             model_name (str): The specific Gemini model version to use.
         """
-        self.api_key = os.environ.get("GEMINI_API_KEY")
+        self.api_key = settings.GEMINI_API_KEY
         if not self.api_key:
             raise ValueError("GEMINI_API_KEY environment variable is not set.")
         

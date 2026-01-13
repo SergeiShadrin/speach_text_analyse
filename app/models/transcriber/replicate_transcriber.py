@@ -3,7 +3,7 @@ from typing import Optional, Dict, Any
 import replicate
 
 from ..interfaces import TranscriberInterface
-
+from app.core.config import settings
 
 
 class ReplicateTranscriber(TranscriberInterface):
@@ -70,7 +70,7 @@ class ReplicateTranscriber(TranscriberInterface):
         Raises:
             FileNotFoundError: If the input_path does not exist.
         """
-        hf_token = os.getenv("HUGGINGFACE_API_TOKEN")
+        hf_token = settings.HUGGINGFACE_API_TOKEN
         if not os.path.exists(input_path):
             raise FileNotFoundError(f"Input file not found: {input_path}")
         

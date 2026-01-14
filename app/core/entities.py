@@ -1,9 +1,9 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from enum import Enum as PyEnum
 from typing import List, Optional
 
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text, JSON, Float, Integer
+from sqlalchemy import Column, String, DateTime, Date, ForeignKey, Text, JSON, Float, Integer
 from sqlalchemy.dialects.postgresql import UUID, ENUM
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 from pgvector.sqlalchemy import Vector
@@ -54,6 +54,9 @@ class MediaFile(Base):
     media_type: Mapped[MediaType] = mapped_column(ENUM(MediaType, name="media_type_enum"))
     status: Mapped[ProcessingStatus] = mapped_column(ENUM(ProcessingStatus, name="status_enum"), default=ProcessingStatus.PENDING)
     description: Mapped[str] = mapped_column(String(1000))
+
+    event: Mapped[str] = mapped_column(String(1000), nullable=True)
+    event_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     
     # Metadata
     duration_seconds: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
@@ -65,7 +68,12 @@ class MediaFile(Base):
     project_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("projects.id"), nullable=True)
     
     # Relationships
-    transcription: Mapped["Transcription"] = relationship("Transcription", back_populates="media_file", uselist=False)
+    transcription: Mapped["Transcription"] = relationship(
+                                                            "Transcription", 
+                                                            back_populates="media_file", 
+                                                            uselist=False,
+                                                            cascade="all, delete-orphan" 
+                                                        )
     project: Mapped["Project"] = relationship("Project", back_populates="files")
 
 
@@ -89,7 +97,7 @@ class Transcription(Base):
 
     # Relationships
     media_file: Mapped["MediaFile"] = relationship("MediaFile", back_populates="transcription")
-    chunks: Mapped[List["TranscriptionChunk"]] = relationship("TranscriptionChunk", back_populates="transcription")
+    chunks: Mapped[List["TranscriptionChunk"]] = relationship("TranscriptionChunk", back_populates="transcription", cascade="all, delete-orphan")
 
 
 
@@ -109,4 +117,5 @@ class TranscriptionChunk(Base):
     embedding: Mapped[Optional[List[float]]] = mapped_column(Vector(1536), nullable=True)
     
     # Relationships
-    transcription: Mapped["Transcription"] = relationship("Transcription", back_populates="chunks")
+    transcription: Mapped["Transcription"] = relationship("Transcription", 
+                                                          back_populates="chunks")

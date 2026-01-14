@@ -2,7 +2,8 @@ import os
 import shutil
 import logging
 from pathlib import Path
-from typing import List
+from typing import Optional, List, Dict, Any, Union
+from datetime import date
 
 from app.core.database import SessionLocal
 from app.repositories.media_repository import MediaRepository
@@ -93,7 +94,9 @@ class TranscriptionService:
                      description: str,
                      input_file_path: Path, 
                      diarization: bool = True,
-                     language: str = "fr") -> None:
+                     language: str = "fr", 
+                     event: str = None,
+                     event_date: Optional[date] = None) -> None:
         
         if not input_file_path.exists():
             raise FileNotFoundError(f"Input file not found: {input_file_path}")
@@ -113,6 +116,8 @@ class TranscriptionService:
             description=description,
             path=str(input_file_path), 
             media_type=media_type,
+            event=event,
+            event_date=event_date
         )
         
         file_id = media_record.id
@@ -223,7 +228,12 @@ class TranscriptionService:
     # ---------------------------------------------------------
     # Import existing text files
     # ---------------------------------------------------------
-    def save_to_db_existing_transcriptions(self, directory: str, description: str,):
+    def save_to_db_existing_transcriptions(self, 
+                                           directory: str, 
+                                           description: str,
+                                           event: str = None,
+                                           event_date: Optional[date] = None
+                                           ):
         dir_path = Path(directory)
         # Create or get the project id
 
@@ -238,7 +248,9 @@ class TranscriptionService:
                 transcription_id = self.repo.create_text_only_entry(
                     filename=file_path.name, 
                     full_text=_text,
-                    description=description
+                    description=description,
+                    event=event,
+                    event_date=event_date,
                 )
 
                 # Split the clean text into smart paragraphs
@@ -267,7 +279,9 @@ class TranscriptionService:
             input_dir: Path = _INPUT_DIR, 
             archives_dir: Path = _ARCHIVES, 
             diarization: bool = True,
-            language: str = "fr") -> None:
+            language: str = "fr", 
+            event: str = None,
+            event_date: Optional[date] = None) -> None:
         
         if not input_dir.exists():
             logger.error(f"Input directory not found: {input_dir}")
@@ -289,7 +303,9 @@ class TranscriptionService:
                     input_file_path=file_path, 
                     diarization=diarization, 
                     description=description,
-                    language=language
+                    language=language, 
+                    event=event,
+                    event_date=event_date
                 )
 
                 # Archive
@@ -298,7 +314,3 @@ class TranscriptionService:
 
             except Exception as e:
                 logger.error(f"❌ Failed to process {file_path.name}: {e}", exc_info=True)
-
-if __name__ == "__main__":
-    service = TranscriptionService()
-    service.run()

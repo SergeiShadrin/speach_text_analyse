@@ -35,7 +35,14 @@ class Normaliser(TranscriptionNormaliser):
         if not self.api_key:
             raise ValueError("GEMINI_API_KEY environment variable is not set.")
         
-        self.client = genai.Client(api_key=self.api_key)
+        # 1. Check if the key is wrapped in a SecretStr object
+        if hasattr(self.api_key, 'get_secret_value'):
+            plain_key = self.api_key.get_secret_value()
+        else:
+            plain_key = self.api_key
+
+        # 2. Pass the plain string to the client
+        self.client = genai.Client(api_key=plain_key)
         self.DEFAULT_CHUNK_SIZE = 20000 * 4
         self.model_name = model_name
 

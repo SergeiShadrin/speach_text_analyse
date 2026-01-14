@@ -21,7 +21,12 @@ class ReplicateTranscriber(TranscriberInterface):
         """
         # The client is implicitly initialized by the replicate module imports
         # assuming the env var is set.
-        self.client = replicate
+        token = settings.REPLICATE_API_TOKEN
+        if hasattr(token, 'get_secret_value'):
+            token = token.get_secret_value()
+
+        # 2. Pass the plain string to the client
+        self.client = replicate.Client(api_token=token)
 
     def _parse_output(self, output: Dict[str, Any], diarization: bool) -> str: 
         """
@@ -71,6 +76,8 @@ class ReplicateTranscriber(TranscriberInterface):
             FileNotFoundError: If the input_path does not exist.
         """
         hf_token = settings.HUGGINGFACE_API_TOKEN
+        if hasattr(hf_token, 'get_secret_value'):
+            hf_token = hf_token.get_secret_value()
         if not os.path.exists(input_path):
             raise FileNotFoundError(f"Input file not found: {input_path}")
         

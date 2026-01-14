@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     # We can automatically construct paths relative to the project root
     INPUT_FOLDER: Path = BASE_DIR / "data" / "input"
 
+    DEFAULT_OUTPUT_FOLDER: Path = Path("data/output")
+
     # Pydantic Config: Tells it to look for a file named ".env"
     model_config = SettingsConfigDict(
         env_file=".env", 

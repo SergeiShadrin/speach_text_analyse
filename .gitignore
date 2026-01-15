@@ -3,3 +3,5 @@ venv/
 .env
 .DS_Store
 data/
+tests/
+transcription_test.ipynb
